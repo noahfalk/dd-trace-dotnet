@@ -178,20 +178,20 @@ namespace Datadog.Trace.ClrProfiler.Integrations
             return scope;
         }
 
-        private static void UpdateSpan(dynamic controllerContext, Span span)
+        private static void UpdateSpan(object controllerContext, Span span)
         {
             try
             {
-                var req = controllerContext?.Request as HttpRequestMessage;
+                var req = controllerContext.GetProperty<HttpRequestMessage>("Request").GetValueOrDefault();
 
                 string host = req?.Headers?.Host ?? string.Empty;
                 string rawUrl = req?.RequestUri?.ToString().ToLowerInvariant() ?? string.Empty;
                 string absoluteUri = req?.RequestUri?.AbsoluteUri?.ToLowerInvariant() ?? string.Empty;
-                string method = controllerContext?.Request?.Method?.Method?.ToUpperInvariant() ?? "GET";
+                string method = req?.Method?.Method?.ToUpperInvariant() ?? "GET";
                 string route = null;
                 try
                 {
-                    route = controllerContext?.RouteData?.Route?.RouteTemplate;
+                    route = controllerContext.GetProperty<object>("RouteData").GetProperty<object>("Route").GetProperty<string>("RouteTemplate").GetValueOrDefault();
                 }
                 catch
                 {
@@ -213,7 +213,8 @@ namespace Datadog.Trace.ClrProfiler.Integrations
                 string action = string.Empty;
                 try
                 {
-                    if (controllerContext?.RouteData?.Values is IDictionary<string, object> routeValues)
+                    var routeValues = controllerContext.GetProperty<object>("RouteData").GetProperty<IDictionary<string, object>>("Values").GetValueOrDefault();
+                    if (routeValues != null)
                     {
                         controller = (routeValues.GetValueOrDefault("controller") as string)?.ToLowerInvariant();
                         action = (routeValues.GetValueOrDefault("action") as string)?.ToLowerInvariant();
