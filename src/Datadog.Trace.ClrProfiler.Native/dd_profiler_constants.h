@@ -44,7 +44,12 @@ inline WSTRING env_vars_to_display[]{
     "System.Text"_W,
     "System.Threading"_W,
     "System.Xml"_W,
-    "Newtonsoft"_W,};
+    "Newtonsoft"_W,
+    // Ignore assemblies used by Microsoft.ReportViewer which may run in a
+    // locked down SecurityContext
+    "Microsoft.ReportViewer"_W,
+    "expression_host_"_W,
+    };
 
   inline WSTRING skip_assemblies[]{
       "mscorlib"_W,
