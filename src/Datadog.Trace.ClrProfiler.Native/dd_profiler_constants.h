@@ -48,12 +48,7 @@ WSTRING skip_app_domain_prefixes[]{
     "System.Text"_W,
     "System.Threading"_W,
     "System.Xml"_W,
-    "Newtonsoft"_W,
-    // Ignore assemblies used by Microsoft.ReportViewer which may run in a
-    // locked down SecurityContext
-    "Microsoft.ReportViewer"_W,
-    "expression_host_"_W,
-    };
+    "Newtonsoft"_W,};
 
   inline WSTRING skip_assemblies[]{
       "mscorlib"_W,
