@@ -25,6 +25,10 @@ inline WSTRING env_vars_to_display[]{
     environment::azure_app_services_app_pool_id,
     environment::azure_app_services_cli_telemetry_profile_value};
 
+WSTRING skip_app_domain_prefixes[]{
+    "Local Processing "_W,
+};
+
  inline WSTRING skip_assembly_prefixes[]{
     "Datadog.Trace"_W,
     "MessagePack"_W,

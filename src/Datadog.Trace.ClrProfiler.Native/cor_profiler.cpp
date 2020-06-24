@@ -300,6 +300,15 @@ HRESULT STDMETHODCALLTYPE CorProfiler::ModuleLoadFinished(ModuleID module_id,
     return S_OK;
   }
 
+  // Do not instrument any assembly loaded into specific AppDomains
+  for (auto&& skip_app_domain_pattern : skip_app_domain_prefixes) {
+    if (module_info.assembly.app_domain_name.rfind(skip_app_domain_pattern, 0) == 0) {
+      Debug("ModuleLoadFinished skipping module by AppDomain.Name pattern: ", module_id, " ",
+            module_info.assembly.name);
+      return S_OK;
+    }
+  }
+
   // In IIS, the startup hook will be inserted into a method in System.Web (which is domain-neutral)
   // but the Datadog.Trace.ClrProfiler.Managed.Loader assembly that the startup hook loads from a
   // byte array will be loaded into a non-shared AppDomain.
