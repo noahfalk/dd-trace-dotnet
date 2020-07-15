@@ -41,5 +41,10 @@ namespace Datadog.Trace
         /// The span type for a custom integration.
         /// </summary>
         public const string Custom = "custom";
+
+        /// <summary>
+        /// The span type for msbuild integration.
+        /// </summary>
+        public const string Build = "build";
     }
 }
