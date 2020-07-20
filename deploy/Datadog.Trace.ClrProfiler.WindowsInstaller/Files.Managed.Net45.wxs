@@ -65,6 +65,11 @@
               Source="$(var.TracerHomeDirectory)\net45\System.ValueTuple.dll"
               KeyPath="yes" Checksum="yes"/>
       </Component>
+      <Component Win64="$(var.Win64)">
+        <File Id="net45_Datadog.Trace.Build.dll"
+              Source="$(var.TracerHomeDirectory)\net45\Datadog.Trace.Build.dll"
+              KeyPath="yes" Checksum="yes"/>
+      </Component>
     </ComponentGroup>
   </Fragment>
 </Wix>
