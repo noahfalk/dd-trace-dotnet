@@ -4,10 +4,11 @@
 #include <corhlpr.h>
 #include <corprof.h>
 #include <atomic>
+#include "InstrumentationEngine.h"
 
 namespace trace {
 
-class CorProfilerBase : public ICorProfilerCallback8 {
+class CorProfilerBase : public ICorProfilerCallback8, IInstrumentationMethod {
  private:
   std::atomic<int> ref_count_;
 
@@ -189,6 +190,49 @@ class CorProfilerBase : public ICorProfilerCallback8 {
   HRESULT STDMETHODCALLTYPE DynamicMethodJITCompilationFinished(
       FunctionID functionId, HRESULT hrStatus, BOOL fIsSafeToBlock) override;
 
+  //
+  // IInstrumentationMethod methods
+  //
+  HRESULT STDMETHODCALLTYPE Initialize(
+      _In_ IProfilerManager* pProfilerManager) override;
+
+  HRESULT STDMETHODCALLTYPE OnAppDomainCreated(
+      _In_ IAppDomainInfo* pAppDomainInfo) override;
+
+  HRESULT STDMETHODCALLTYPE OnAppDomainShutdown(
+      _In_ IAppDomainInfo* pAppDomainInfo) override;
+
+  HRESULT STDMETHODCALLTYPE OnAssemblyLoaded(
+      _In_ IAssemblyInfo* pAssemblyInfo) override;
+
+  HRESULT STDMETHODCALLTYPE OnAssemblyUnloaded(
+      _In_ IAssemblyInfo* pAssemblyInfo) override;
+
+  HRESULT STDMETHODCALLTYPE OnModuleLoaded(
+      _In_ IModuleInfo* pModuleInfo) override;
+
+  HRESULT STDMETHODCALLTYPE OnModuleUnloaded(
+      _In_ IModuleInfo* pModuleInfo) override;
+
+  HRESULT STDMETHODCALLTYPE OnShutdown() override;
+
+  HRESULT STDMETHODCALLTYPE ShouldInstrumentMethod(_In_ IMethodInfo* pMethodInfo, _In_ BOOL isRejit,
+                         _Out_ BOOL* pbInstrument) override;
+
+  HRESULT STDMETHODCALLTYPE BeforeInstrumentMethod(
+      _In_ IMethodInfo* pMethodInfo, _In_ BOOL isRejit) override;
+
+  HRESULT STDMETHODCALLTYPE InstrumentMethod(
+      _In_ IMethodInfo* pMethodInfo, _In_ BOOL isRejit) override;
+
+  HRESULT STDMETHODCALLTYPE OnInstrumentationComplete(
+      _In_ IMethodInfo* pMethodInfo, _In_ BOOL isRejit) override;
+
+  HRESULT STDMETHODCALLTYPE AllowInlineSite(
+      _In_ IMethodInfo* pMethodInfoInlinee, _In_ IMethodInfo* pMethodInfoCaller,
+      _Out_ BOOL* pbAllowInline) override;
+
+
   HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid,
                                            void** ppvObject) override {
     if (riid == __uuidof(ICorProfilerCallback8) ||
@@ -198,9 +242,15 @@ class CorProfilerBase : public ICorProfilerCallback8 {
         riid == __uuidof(ICorProfilerCallback4) ||
         riid == __uuidof(ICorProfilerCallback3) ||
         riid == __uuidof(ICorProfilerCallback2) ||
-        riid == __uuidof(ICorProfilerCallback) || riid == IID_IUnknown) {
-      *ppvObject = this;
-      this->AddRef();
+        riid == __uuidof(ICorProfilerCallback) ||
+        riid == IID_IUnknown) {
+      *ppvObject = static_cast<ICorProfilerCallback8*>(this);
+      AddRef();
+      return S_OK;
+    }
+    else if (riid == __uuidof(IInstrumentationMethod)) {
+      *ppvObject = static_cast<IInstrumentationMethod*>(this);
+      AddRef();
       return S_OK;
     }
 

@@ -153,7 +153,9 @@ namespace Datadog.Trace.TestHelpers
             if (IsCoreClr())
             {
                 environmentVariables["CORECLR_ENABLE_PROFILING"] = profilerEnabled;
-                environmentVariables["CORECLR_PROFILER"] = EnvironmentTools.ProfilerClsId;
+                environmentVariables["CORECLR_PROFILER"] = EnvironmentTools.MicrosoftInstrumentationEngineClsId;
+                // dev builds aren't going to be signed
+                environmentVariables["MicrosoftInstrumentationEngine_DisableCodeSignatureValidation"] = "1";
 
                 profilerPath = GetProfilerPath();
                 environmentVariables["CORECLR_PROFILER_PATH"] = profilerPath;
@@ -162,7 +164,7 @@ namespace Datadog.Trace.TestHelpers
             else
             {
                 environmentVariables["COR_ENABLE_PROFILING"] = profilerEnabled;
-                environmentVariables["COR_PROFILER"] = EnvironmentTools.ProfilerClsId;
+                environmentVariables["COR_PROFILER"] = EnvironmentTools.MicrosoftInstrumentationEngineClsId;
 
                 profilerPath = GetProfilerPath();
                 environmentVariables["COR_PROFILER_PATH"] = profilerPath;
@@ -258,8 +260,8 @@ namespace Datadog.Trace.TestHelpers
                 string extension = EnvironmentTools.IsWindows()
                                        ? "dll"
                                        : "so";
-
-                string fileName = $"Datadog.Trace.ClrProfiler.Native.{extension}";
+                string arch = Marshal.SizeOf<IntPtr>() == 8 ? "x64" : "x86";
+                string fileName = $"MicrosoftInstrumentationEngine_{arch}.{extension}";
 
                 var directory = GetSampleApplicationOutputDirectory();
 

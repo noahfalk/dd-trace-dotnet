@@ -24,11 +24,54 @@ namespace trace {
 
 CorProfiler* profiler = nullptr;
 
-//
-// ICorProfilerCallback methods
-//
+class __declspec(uuid("AF1A5647-2F09-4F0F-8423-7612D1CAC640"))
+    InstrumentationDataItem : public IUnknown
+{
+ private:
+  std::atomic<int> ref_count_;
+
+ public:
+  mdMethodDef m_startupMethod;
+
+  InstrumentationDataItem() : 
+      ref_count_(0),
+      m_startupMethod(0)
+  {}
+
+  HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid,
+                                           void** ppvObject) override {
+    if (riid == IID_IUnknown) {
+      *ppvObject = static_cast<IUnknown*>(this);
+      AddRef();
+      return S_OK;
+    }
+
+    *ppvObject = nullptr;
+    return E_NOINTERFACE;
+  }
+
+  ULONG STDMETHODCALLTYPE AddRef(void) override {
+    return std::atomic_fetch_add(&this->ref_count_, 1) + 1;
+  }
+
+  ULONG STDMETHODCALLTYPE Release(void) override {
+    int count = std::atomic_fetch_sub(&this->ref_count_, 1) - 1;
+
+    if (count <= 0) {
+      delete this;
+    }
+
+    return count;
+  }
+};
+
 HRESULT STDMETHODCALLTYPE
-CorProfiler::Initialize(IUnknown* cor_profiler_info_unknown) {
+CorProfiler::Initialize(_In_ IProfilerManager* pProfilerManager) {
+
+  ComPtr<IUnknown> pProfilerInfo;
+  pProfilerManager->GetCorProfilerInfo((IUnknown**)&pProfilerInfo);
+  IUnknown* cor_profiler_info_unknown = pProfilerInfo.Get();
+
   // check if debug mode is enabled
   const auto debug_enabled_value =
       GetEnvironmentValue(environment::debug_enabled);
@@ -181,21 +224,17 @@ CorProfiler::Initialize(IUnknown* cor_profiler_info_unknown) {
   return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE CorProfiler::AssemblyLoadFinished(AssemblyID assembly_id,
-    HRESULT hr_status) {
-  if (FAILED(hr_status)) {
-    // if assembly failed to load, skip it entirely,
-    // otherwise we can crash the process if module is not valid
-    CorProfilerBase::AssemblyLoadFinished(assembly_id, hr_status);
-    return S_OK;
-  }
+HRESULT STDMETHODCALLTYPE CorProfiler::OnAssemblyLoaded(_In_ IAssemblyInfo* pAssemblyInfo) {
+
+  AssemblyID assembly_id = 0;
+  pAssemblyInfo->GetID(&assembly_id);
 
   if (!is_attached_) {
     return S_OK;
   }
 
   if (debug_logging_enabled) {
-    Debug("AssemblyLoadFinished: ", assembly_id, " ", hr_status);
+    Debug("AssemblyLoadFinished: ", assembly_id);
   }
 
   // keep this lock until we are done using the module,
@@ -260,14 +299,10 @@ HRESULT STDMETHODCALLTYPE CorProfiler::AssemblyLoadFinished(AssemblyID assembly_
   return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE CorProfiler::ModuleLoadFinished(ModuleID module_id,
-                                                          HRESULT hr_status) {
-  if (FAILED(hr_status)) {
-    // if module failed to load, skip it entirely,
-    // otherwise we can crash the process if module is not valid
-    CorProfilerBase::ModuleLoadFinished(module_id, hr_status);
-    return S_OK;
-  }
+HRESULT STDMETHODCALLTYPE CorProfiler::OnModuleLoaded(_In_ IModuleInfo* pModuleInfo) {
+
+  ModuleID module_id = 0;
+  pModuleInfo->GetModuleID(&module_id);
 
   if (!is_attached_) {
     return S_OK;
@@ -412,7 +447,11 @@ HRESULT STDMETHODCALLTYPE CorProfiler::ModuleLoadFinished(ModuleID module_id,
   return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE CorProfiler::ModuleUnloadStarted(ModuleID module_id) {
+HRESULT STDMETHODCALLTYPE CorProfiler::OnModuleUnloaded(_In_ IModuleInfo* pModuleInfo) {
+
+  ModuleID module_id = 0;
+  pModuleInfo->GetModuleID(&module_id);
+
   if (debug_logging_enabled) {
     const auto module_info = GetModuleInfo(this->info_, module_id);
 
@@ -457,11 +496,12 @@ HRESULT STDMETHODCALLTYPE CorProfiler::Shutdown() {
   return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE CorProfiler::JITCompilationStarted(
-    FunctionID function_id, BOOL is_safe_to_block) {
-  if (!is_attached_ || !is_safe_to_block) {
-    return S_OK;
-  }
+HRESULT STDMETHODCALLTYPE CorProfiler::ShouldInstrumentMethod(
+    _In_ IMethodInfo* pMethodInfo, _In_ BOOL isRejit,
+    _Out_ BOOL* pbInstrument) {
+
+  FunctionID function_id = 0;
+  pMethodInfo->GetFunctionId(&function_id);
 
   // keep this lock until we are done using the module,
   // to prevent it from unloading while in use
@@ -474,7 +514,10 @@ HRESULT STDMETHODCALLTYPE CorProfiler::JITCompilationStarted(
                                             &function_token);
 
   if (FAILED(hr)) {
-    Warn("JITCompilationStarted: Call to ICorProfilerInfo3.GetFunctionInfo() failed for ", function_id);
+    Warn(
+        "JITCompilationStarted: Call to ICorProfilerInfo3.GetFunctionInfo() "
+        "failed for ",
+        function_id);
     return S_OK;
   }
 
@@ -491,8 +534,7 @@ HRESULT STDMETHODCALLTYPE CorProfiler::JITCompilationStarted(
   }
 
   // get function info
-  const auto caller =
-      GetFunctionInfo(module_metadata->metadata_import, function_token);
+  const auto caller = GetFunctionInfo(module_metadata->metadata_import, function_token);
   if (!caller.IsValid()) {
     return S_OK;
   }
@@ -529,14 +571,39 @@ HRESULT STDMETHODCALLTYPE CorProfiler::JITCompilationStarted(
           " domain_neutral=", domain_neutral_assembly);
 
     first_jit_compilation_app_domains.insert(module_metadata->app_domain_id);
-
-    hr = RunILStartupHook(module_metadata->metadata_emit, module_id,
-                          function_token);
-
-    if (FAILED(hr)) {
-      Warn("JITCompilationStarted: Call to RunILStartupHook() failed for ", module_id, " ", function_token);
+    ComPtr<IModuleInfo> pModuleInfo;
+    if (FAILED(pMethodInfo->GetModuleInfo((IModuleInfo**)&pModuleInfo))) {
+      Warn("JITCompilationStarted: MethodInfo::GetModuleInfo() failed for ", module_id, " ", function_token);
       return S_OK;
     }
+    ComPtr<IModuleInfo4> pModuleInfo4 = pModuleInfo.As<IModuleInfo4>(__uuidof(IModuleInfo4));
+    if(pModuleInfo4.IsNull()) {
+      Warn("JITCompilationStarted: IModuleInfo QI for IModuleInfo4 failed for ", module_id, " ", function_token);
+      return S_OK;
+    }
+
+    mdMethodDef startupMethodDef = 0;
+    if (FAILED(GenerateVoidILStartupMethod(pModuleInfo4.Get(), &startupMethodDef))) {
+      Warn("JITCompilationStarted: Call to GenerateVoidILStartupMethod failed");
+      return S_OK;
+    }
+    
+    ComPtr<IDataContainer> pDataContainer;
+    if (FAILED(pMethodInfo->QueryInterface<IDataContainer>((IDataContainer**)&pDataContainer))) {
+      Warn("JITCompilationStarted: IMethodInfo QI for IDataContainer failed");
+      return S_OK;
+    }
+
+    InstrumentationDataItem* pDataItem = new InstrumentationDataItem();
+    pDataItem->m_startupMethod = startupMethodDef;
+    if (FAILED(pDataContainer->SetDataItem(&CLSID_CorProfiler, &__uuidof(pDataItem), (IUnknown*)pDataItem))) {
+      Warn("JITCompilationStarted: IDataContainer SetDataItem failed");
+      delete pDataItem;
+      return S_OK;
+    }
+
+    *pbInstrument = TRUE;
+    return S_OK;
   }
 
   // we don't actually need to instrument anything in
@@ -579,6 +646,12 @@ HRESULT STDMETHODCALLTYPE CorProfiler::JITCompilationStarted(
     return S_OK;
   }
 
+  return S_OK;
+}
+
+HRESULT CorProfiler::InstrumentMethod(
+    IMethodInfo* pMethodInfo,
+    BOOL isRejit) {
   return S_OK;
 }
 
@@ -1110,10 +1183,10 @@ bool CorProfiler::ProfilerAssemblyIsLoadedIntoAppDomain(AppDomainID app_domain_i
 // Startup methods
 //
 HRESULT CorProfiler::RunILStartupHook(
-    const ComPtr<IMetaDataEmit2>& metadata_emit, const ModuleID module_id,
+    const ComPtr<IMetaDataEmit2>& metadata_emit, const ModuleID module_id, IModuleInfo4* pModuleInfo,
     const mdToken function_token) {
   mdMethodDef ret_method_token;
-  auto hr = GenerateVoidILStartupMethod(module_id, &ret_method_token);
+  auto hr = GenerateVoidILStartupMethod(pModuleInfo, &ret_method_token);
 
   if (FAILED(hr)) {
     Warn("RunILStartupHook: Call to GenerateVoidILStartupMethod failed for ", module_id);
@@ -1144,8 +1217,50 @@ HRESULT CorProfiler::RunILStartupHook(
   return S_OK;
 }
 
-HRESULT CorProfiler::GenerateVoidILStartupMethod(const ModuleID module_id,
-                                                 mdMethodDef* ret_method_token) {
+HRESULT CorProfiler::GenerateVoidILStartupMethod(
+    IModuleInfo4* pModuleInfo, mdMethodDef* ret_method_token) {
+  HRESULT hr = S_OK;
+  BYTE* pAssemblyArray = nullptr;
+  int assemblySize = 0;
+  BYTE* pSymbolsArray = nullptr;
+  int symbolsSize = 0;
+  GetAssemblyAndSymbolsBytes(&pAssemblyArray, &assemblySize, &pSymbolsArray,
+                             &symbolsSize);
+  
+  const WCHAR* typeName = L"Datadog.Trace.ClrProfiler.Managed.Loader.DDVoidMethodType";
+  if (FAILED(hr = pModuleInfo->ImportType((LPCBYTE)pAssemblyArray, assemblySize, MappingKind_Flat, typeName))) {
+    Warn("GenerateVoidILStartupMethod: Call to IModuleInfo4::ImportType failed");
+    return hr;
+  }
+
+  ComPtr<IMetaDataImport> pImport;
+  if (FAILED(hr = pModuleInfo->GetMetaDataImport((IUnknown**)&pImport))) {
+    Warn("GenerateVoidILStartupMethod: GetMetaDataImport failed");
+    return hr;
+  }
+
+  mdTypeDef importedTypeDefTok = 0;
+  if (FAILED(hr = pImport->FindTypeDefByName(typeName, mdTypeDefNil, &importedTypeDefTok))) {
+    Warn("GenerateVoidILStartupMethod: IMetadataImport::FindTypeDefByName() failed to find DDVoidMethodType");
+    return hr;
+  }
+
+  const WCHAR* methodName = L"DDVoidMethodCall";
+  BYTE methodSig[] = {
+      IMAGE_CEE_CS_CALLCONV_DEFAULT,  // Calling convention
+      0,                              // Number of parameters
+      ELEMENT_TYPE_VOID               // Return type
+  };
+  if (FAILED(hr = pImport->FindMethod(importedTypeDefTok, methodName,
+                                      methodSig, sizeof(methodSig), ret_method_token))) {
+    Warn("GenerateVoidILStartupMethod: IMetadataImport::FindMethod() failed to find DDVoidMethodCall");
+    return hr;
+  }
+
+  return S_OK;
+}
+
+  /*
   ComPtr<IUnknown> metadata_interfaces;
   auto hr = this->info_->GetModuleMetaData(module_id, ofRead | ofWrite,
                                            IID_IMetaDataImport2,
@@ -1716,6 +1831,7 @@ Debug("GenerateVoidILStartupMethod: Linux: Setting the PInvoke native profiler l
 
   return S_OK;
 }
+*/
 
 #ifndef _WIN32
 extern uint8_t dll_start[] asm("_binary_Datadog_Trace_ClrProfiler_Managed_Loader_dll_start");

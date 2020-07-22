@@ -24,6 +24,11 @@
     <RootNamespace>ClrProfiler</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <CORECLR_PATH>..\..\lib\coreclr</CORECLR_PATH>
+    <!-- Normally I'd expect this to come from a NuGet package or some source/binary redist,
+         however I wanted to grab a local build of the project that had changes in it-->
+    <CLRIE_PATH>..\..\..\CLRInstrumentationEngine</CLRIE_PATH>
+    <CLRIE_INCLUDE_PATH>$(CLRIE_PATH)\src\InstrumentationEngine.Api\</CLRIE_INCLUDE_PATH>
+    <CLRIE_BIN_PATH>$(CLRIE_PATH)\bin\Debug\$(Platform)\MicrosoftInstrumentationEngine_$(Platform).dll</CLRIE_BIN_PATH>
     <ProjectName>Datadog.Trace.ClrProfiler.Native</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -63,25 +68,25 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>bin\$(Configuration)\$(Platform)\static\</OutDir>
     <IntDir>obj\$(Configuration)\$(Platform)\static\</IntDir>
-    <IncludePath>$(CORECLR_PATH)\src\pal\prebuilt\inc;$(CORECLR_PATH)\src\inc;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(CORECLR_PATH)\src\pal\prebuilt\inc;$(CORECLR_PATH)\src\inc;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(CLRIE_INCLUDE_PATH)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>bin\$(Configuration)\x86\static\</OutDir>
     <IntDir>obj\$(Configuration)\x86\static\</IntDir>
-    <IncludePath>$(CORECLR_PATH)\src\pal\prebuilt\inc;$(CORECLR_PATH)\src\inc;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(CORECLR_PATH)\src\pal\prebuilt\inc;$(CORECLR_PATH)\src\inc;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(CLRIE_INCLUDE_PATH)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>bin\$(Configuration)\$(Platform)\static\</OutDir>
     <IntDir>obj\$(Configuration)\$(Platform)\static\</IntDir>
-    <IncludePath>$(CORECLR_PATH)\src\pal\prebuilt\inc;$(CORECLR_PATH)\src\inc;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(CORECLR_PATH)\src\pal\prebuilt\inc;$(CORECLR_PATH)\src\inc;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(CLRIE_INCLUDE_PATH)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>bin\$(Configuration)\x86\static\</OutDir>
     <IntDir>obj\$(Configuration)\x86\static\</IntDir>
-    <IncludePath>$(CORECLR_PATH)\src\pal\prebuilt\inc;$(CORECLR_PATH)\src\inc;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(CORECLR_PATH)\src\pal\prebuilt\inc;$(CORECLR_PATH)\src\inc;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(CLRIE_INCLUDE_PATH)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

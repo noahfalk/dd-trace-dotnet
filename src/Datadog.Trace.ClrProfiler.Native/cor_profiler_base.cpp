@@ -475,4 +475,72 @@ HRESULT STDMETHODCALLTYPE CorProfilerBase::DynamicMethodJITCompilationFinished(
   return S_OK;
 }
 
+//
+// IInstrumentationMethod callbacks
+
+
+HRESULT STDMETHODCALLTYPE
+CorProfilerBase::Initialize(
+    _In_ IProfilerManager* pProfilerManager) {
+  return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE
+CorProfilerBase::OnAppDomainCreated(
+    _In_ IAppDomainInfo* pAppDomainInfo) {
+  return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE
+CorProfilerBase::OnAppDomainShutdown(
+    _In_ IAppDomainInfo* pAppDomainInfo) {
+  return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE CorProfilerBase::OnAssemblyLoaded(
+    _In_ IAssemblyInfo* pAssemblyInfo) {
+  return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE CorProfilerBase::OnAssemblyUnloaded(
+    _In_ IAssemblyInfo* pAssemblyInfo) {
+  return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE CorProfilerBase::OnModuleLoaded(
+    _In_ IModuleInfo* pModuleInfo) {
+  return S_OK;
+}
+HRESULT STDMETHODCALLTYPE CorProfilerBase::OnModuleUnloaded(
+    _In_ IModuleInfo* pModuleInfo) {
+  return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE CorProfilerBase::OnShutdown() { return S_OK; }
+
+HRESULT STDMETHODCALLTYPE CorProfilerBase::ShouldInstrumentMethod(
+    _In_ IMethodInfo* pMethodInfo, _In_ BOOL isRejit, _Out_ BOOL* pbInstrument) {
+  return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE CorProfilerBase::BeforeInstrumentMethod(
+    _In_ IMethodInfo* pMethodInfo, _In_ BOOL isRejit) {
+  return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE CorProfilerBase::InstrumentMethod(
+    _In_ IMethodInfo* pMethodInfo, _In_ BOOL isRejit) {
+  return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE CorProfilerBase::OnInstrumentationComplete(
+    _In_ IMethodInfo* pMethodInfo, _In_ BOOL isRejit) {
+  return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE CorProfilerBase::AllowInlineSite(
+    _In_ IMethodInfo* pMethodInfoInlinee, _In_ IMethodInfo* pMethodInfoCaller, _Out_ BOOL* pbAllowInline) {
+  return S_OK;
+}
+
 }  // namespace trace

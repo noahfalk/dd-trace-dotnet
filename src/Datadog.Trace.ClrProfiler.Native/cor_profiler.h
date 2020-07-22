@@ -64,9 +64,10 @@ class CorProfiler : public CorProfilerBase {
   // Startup methods
   //
   HRESULT RunILStartupHook(const ComPtr<IMetaDataEmit2>&,
-                             const ModuleID module_id,
+                             const ModuleID module_id, 
+                             IModuleInfo4* pModuleInfo,
                              const mdToken function_token);
-  HRESULT GenerateVoidILStartupMethod(const ModuleID module_id,
+  HRESULT GenerateVoidILStartupMethod(IModuleInfo4* pModuleInfo,
                            mdMethodDef* ret_method_token);
 
  public:
@@ -80,21 +81,30 @@ class CorProfiler : public CorProfilerBase {
   //
   // ICorProfilerCallback methods
   //
-  HRESULT STDMETHODCALLTYPE
-  Initialize(IUnknown* cor_profiler_info_unknown) override;
-
-  HRESULT STDMETHODCALLTYPE AssemblyLoadFinished(AssemblyID assembly_id,
-                                                 HRESULT hr_status) override;
-
-  HRESULT STDMETHODCALLTYPE ModuleLoadFinished(ModuleID module_id,
-                                               HRESULT hr_status) override;
-
-  HRESULT STDMETHODCALLTYPE ModuleUnloadStarted(ModuleID module_id) override;
-
-  HRESULT STDMETHODCALLTYPE
-  JITCompilationStarted(FunctionID function_id, BOOL is_safe_to_block) override;
 
   HRESULT STDMETHODCALLTYPE Shutdown() override;
+
+  //
+  // IInstrumentationMethod methods
+  //
+  HRESULT STDMETHODCALLTYPE
+  Initialize(_In_ IProfilerManager* pProfilerManager) override;
+
+  HRESULT STDMETHODCALLTYPE
+  OnModuleLoaded(_In_ IModuleInfo* pModuleInfo) override;
+
+  HRESULT STDMETHODCALLTYPE
+  OnModuleUnloaded(_In_ IModuleInfo* pModuleInfo) override;
+
+  HRESULT STDMETHODCALLTYPE
+  OnAssemblyLoaded(_In_ IAssemblyInfo* pAssemblyInfo) override;
+
+  HRESULT STDMETHODCALLTYPE
+  ShouldInstrumentMethod(_In_ IMethodInfo* pMethodInfo, _In_ BOOL isRejit,
+                         _Out_ BOOL* pbInstrument) override;
+
+  HRESULT STDMETHODCALLTYPE 
+  InstrumentMethod(_In_ IMethodInfo* pMethodInfo, _In_ BOOL isRejit) override;
 };
 
 // Note: Generally you should not have a single, global callback implementation,

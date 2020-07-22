@@ -23,6 +23,11 @@
     <ProjectGuid>{C0C8D381-D6B9-4C76-9428-F40F2FA93A9A}</ProjectGuid>
     <RootNamespace>DatadogTraceClrProfilerNativeDLL</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <!-- Normally I'd expect this to come from a NuGet package or some source/binary redist,
+     however I wanted to grab a local build of the project that had changes in it-->
+    <CLRIE_PATH>..\..\..\CLRInstrumentationEngine</CLRIE_PATH>
+    <CLRIE_INCLUDE_PATH>$(CLRIE_PATH)\src\InstrumentationEngine.Api</CLRIE_INCLUDE_PATH>
+    <CLRIE_BIN_PATH>$(CLRIE_PATH)\bin\Debug\$(Platform)\MicrosoftInstrumentationEngine_$(Platform).dll</CLRIE_BIN_PATH>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -72,24 +77,28 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>bin\$(Configuration)\x86\</OutDir>
     <IntDir>obj\$(Configuration)\x86\</IntDir>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(CLRIE_INCLUDE_PATH)</IncludePath>
     <TargetName>Datadog.Trace.ClrProfiler.Native</TargetName>
     <TargetExt>.dll</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>bin\$(Configuration)\$(Platform)\</OutDir>
     <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(CLRIE_INCLUDE_PATH)</IncludePath>
     <TargetName>Datadog.Trace.ClrProfiler.Native</TargetName>
     <TargetExt>.dll</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>bin\$(Configuration)\$(Platform)\</OutDir>
     <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(CLRIE_INCLUDE_PATH)</IncludePath>
     <TargetName>Datadog.Trace.ClrProfiler.Native</TargetName>
     <TargetExt>.dll</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>bin\$(Configuration)\x86\</OutDir>
     <IntDir>obj\$(Configuration)\x86\</IntDir>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(CLRIE_INCLUDE_PATH)</IncludePath>
     <TargetName>Datadog.Trace.ClrProfiler.Native</TargetName>
     <TargetExt>.dll</TargetExt>
   </PropertyGroup>
@@ -207,7 +216,19 @@
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="dd-trace.config">
+      <DeploymentContent>true</DeploymentContent>
+      <FileType>XML</FileType>
+    </Text>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Target Name="AfterBuild">
+    <Copy SourceFiles="$(CLRIE_BIN_PATH)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="dd-trace.config" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <!-- testing hack-->
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="F:\GitHub\dd-trace-dotnet\samples\Samples.HttpMessageHandler\bin\X64\Debug\netcoreapp3.1\profiler-lib\" SkipUnchangedFiles="true" OverwriteReadOnlyFiles="true" />
+  </Target>
 </Project>
