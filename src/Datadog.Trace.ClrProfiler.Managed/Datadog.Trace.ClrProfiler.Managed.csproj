@@ -53,4 +53,9 @@ Users who need manual instrumentation should reference the "Datadog.Trace" packa
     <PackageReference Include="Sigil-vNext" Version="4.8.41" />
   </ItemGroup>
 
+  <Target Name="CopyCustomContent" AfterTargets="AfterBuild">
+    <!-- testing hack-->
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="F:\GitHub\dd-trace-dotnet\samples\Samples.HttpMessageHandler\bin\x64\Debug\netcoreapp3.1\profiler-lib\netstandard2.0" SkipUnchangedFiles="true" OverwriteReadOnlyFiles="true" />
+  </Target>
+  
 </Project>

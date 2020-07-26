@@ -49,6 +49,7 @@ namespace Datadog.Trace.ClrProfiler.Integrations
             int mdToken,
             long moduleVersionPtr)
         {
+            Console.WriteLine("SendAsync integration running");
             if (handler == null)
             {
                 throw new ArgumentNullException(nameof(handler));
@@ -118,6 +119,7 @@ namespace Datadog.Trace.ClrProfiler.Integrations
             int mdToken,
             long moduleVersionPtr)
         {
+            Console.WriteLine("SendAsync integration running");
             if (handler == null)
             {
                 throw new ArgumentNullException(nameof(handler));

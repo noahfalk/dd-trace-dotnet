@@ -51,7 +51,9 @@ class CorProfiler : public CorProfilerBase {
                                          const ModuleID module_id,
                                          const mdToken function_token,
                                          const FunctionInfo& caller,
-                                         const std::vector<MethodReplacement> method_replacements);
+                                         const std::vector<MethodReplacement> method_replacements,
+                                         IMethodInfo* pMethodInfo,
+                                         BOOL* bShouldInstrument);
   HRESULT ProcessInsertionCalls(ModuleMetadata* module_metadata,
                                          const FunctionID function_id,
                                          const ModuleID module_id,
