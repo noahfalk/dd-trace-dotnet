@@ -301,6 +301,7 @@ HRESULT STDMETHODCALLTYPE CorProfiler::OnAssemblyLoaded(_In_ IAssemblyInfo* pAss
 
 HRESULT STDMETHODCALLTYPE CorProfiler::OnModuleLoaded(_In_ IModuleInfo* pModuleInfo) {
 
+  HRESULT hr = S_OK;
   ModuleID module_id = 0;
   pModuleInfo->GetModuleID(&module_id);
 
@@ -354,6 +355,23 @@ HRESULT STDMETHODCALLTYPE CorProfiler::OnModuleLoaded(_In_ IModuleInfo* pModuleI
     return S_OK;
   }
 
+  if (module_info.assembly.name == "Datadog.Trace.ClrProfiler.Managed"_W) {
+    // we need this later to load integration bytecode
+    IfFailRet(pModuleInfo->GetImageBase(&managed_profiler_image_base));
+  }
+
+  // this should probably be driven by the list of integrations, but hard-coding
+  // an example for now
+  if (module_info.assembly.name == "System.Net.Http"_W) {
+    ComPtr<IModuleInfo4> pModuleInfo4;
+    IfFailRet(pModuleInfo->QueryInterface(__uuidof(IModuleInfo4),
+                                          (void**)&pModuleInfo4));
+    IfFailRet(pModuleInfo4->ImportType(
+        managed_profiler_image_base, 0, MappingKind_Image,
+        L"Datadog.Trace.ClrProfiler.Integrations.Private.HttpMessageHandler"));
+  }
+
+
   for (auto&& skip_assembly_pattern : skip_assembly_prefixes) {
     if (module_info.assembly.name.rfind(skip_assembly_pattern, 0) == 0) {
       Debug("ModuleLoadFinished skipping module by pattern: ", module_id, " ",
@@ -383,7 +401,7 @@ HRESULT STDMETHODCALLTYPE CorProfiler::OnModuleLoaded(_In_ IModuleInfo* pModuleI
   }
 
   ComPtr<IUnknown> metadata_interfaces;
-  auto hr = this->info_->GetModuleMetaData(module_id, ofRead | ofWrite,
+  hr = this->info_->GetModuleMetaData(module_id, ofRead | ofWrite,
                                            IID_IMetaDataImport2,
                                            metadata_interfaces.GetAddressOf());
 
